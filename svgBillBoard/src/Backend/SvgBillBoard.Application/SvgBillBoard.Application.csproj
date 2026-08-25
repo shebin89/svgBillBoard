@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SvgBillBoard.Domain\SvgBillBoard.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Common\" />
+    <Folder Include="Features\Auth\" />
+    <Folder Include="Features\Campaigns\" />
+    <Folder Include="Features\DeviceGroups\" />
+    <Folder Include="Features\Devices\" />
+    <Folder Include="Features\Locations\" />
+    <Folder Include="Features\Media\" />
+    <Folder Include="Features\Organizations\" />
+    <Folder Include="Features\Playback\" />
+    <Folder Include="Features\Player\" />
+    <Folder Include="Features\Playlists\" />
+    <Folder Include="Features\Schedules\" />
+    <Folder Include="Features\Users\" />
+    <Folder Include="Validators\" />
+  </ItemGroup>
+
+</Project>

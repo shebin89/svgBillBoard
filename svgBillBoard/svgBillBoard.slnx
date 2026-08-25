@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/Backend/SvgBillBoard.API/SvgBillBoard.API.csproj" />
+  <Project Path="src/Backend/SvgBillBoard.Application/SvgBillBoard.Application.csproj" />
+  <Project Path="src/Backend/SvgBillBoard.Domain/SvgBillBoard.Domain.csproj" />
+  <Project Path="src/Backend/SvgBillBoard.Infrastructure/SvgBillBoard.Infrastructure.csproj" />
+</Solution>
