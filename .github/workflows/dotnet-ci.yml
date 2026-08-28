@@ -1,18 +1,7 @@
-- name: Restore
-  run: dotnet restore ./svgBillBoard/YourSolution.sln
-
-- name: Build
-  run: dotnet build ./svgBillBoard/YourSolution.sln --no-restore --configuration Release
-
-- name: Test
-  run: dotnet test ./svgBillBoard/YourSolution.sln --no-build --configuration Releasename: .NET CI
+﻿name: .NET CI
 
 on:
   pull_request:
-    branches:
-      - main
-
-  push:
     branches:
       - main
 
@@ -22,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -33,7 +22,7 @@ jobs:
         run: dotnet restore ./svgBillBoard/svgBillBoard.slnx
 
       - name: Build
-        run: dotnet build ./svgBillBoard/svgBillBoard.slnx --no-restore --configuration Release
+        run: dotnet build ./svgBillBoard/svgBillBoard.slnx --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test ./svgBillBoard/svgBillBoard.slnx --no-build --configuration Release
+        run: dotnet test ./svgBillBoard/svgBillBoard.slnx --configuration Release --no-build
