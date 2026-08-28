@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using SvgBillBoard.API.Hubs;
+using SvgBillBoard.API.Services;
 using SvgBillBoard.Application;
+using SvgBillBoard.Application.Abstractions.Services;
 using SvgBillBoard.Infrastructure;
 using System.Text;
 
@@ -25,6 +28,8 @@ var jwtAudience = jwtSettings["Audience"]
 
 // Controllers
 builder.Services.AddControllers();
+
+builder.Services.AddSignalR();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -75,8 +80,43 @@ builder.Services
 
                 ClockSkew = TimeSpan.Zero
             };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine(
+                    "========== JWT AUTHENTICATION FAILED ==========");
+
+                Console.WriteLine(
+                    context.Exception.ToString());
+
+                Console.WriteLine(
+                    "================================================");
+
+                return Task.CompletedTask;
+            },
+
+            OnChallenge = context =>
+            {
+                Console.WriteLine(
+                    "========== JWT CHALLENGE ==========");
+
+                Console.WriteLine(
+                    $"Error: {context.Error}");
+
+                Console.WriteLine(
+                    $"Description: {context.ErrorDescription}");
+
+                Console.WriteLine(
+                    "===================================");
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
+// Authorization
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("DeviceOnly", policy =>
@@ -93,8 +133,18 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddApplication();
 
 builder.Services.AddInfrastructure(
-    builder.Configuration);
+    builder.Configuration,
+    builder.Environment.IsEnvironment("Testing"),
+    builder.Environment.IsEnvironment("Testing")
+        ? $"SvgBillBoard_TestDb_{Guid.NewGuid()}"
+        : null);
 
+// SignalR notifier
+builder.Services.AddScoped<
+    IDeviceStatusNotifier,
+    DeviceStatusNotifier>();
+
+// Build
 var app = builder.Build();
 
 // Swagger
@@ -107,11 +157,19 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// IMPORTANT ORDER
+app.UseStaticFiles();
+
 app.UseAuthentication();
 
 app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapHub<DeviceStatusHub>(
+    "/hubs/device-status");
+
 app.Run();
+
+public partial class Program
+{
+}

@@ -6,8 +6,10 @@ using SvgBillBoard.Application.Abstractions.Security;
 using SvgBillBoard.Application.Abstractions.Services;
 using SvgBillBoard.Domain.Interfaces;
 using SvgBillBoard.Infrastructure.Authentication;
+using SvgBillBoard.Infrastructure.BackgroundServices;
 using SvgBillBoard.Infrastructure.Persistence;
 using SvgBillBoard.Infrastructure.Repositories;
+using SvgBillBoard.Infrastructure.Storage;
 
 namespace SvgBillBoard.Infrastructure;
 
@@ -15,11 +17,23 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        bool useInMemoryDatabase = false,
+        string? testDatabaseName = null)
     {
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection")));
+        if (useInMemoryDatabase)
+        {
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseInMemoryDatabase(
+                    testDatabaseName ?? "SvgBillBoard_TestDb"));
+        }
+        else
+        {
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(
+                    configuration.GetConnectionString(
+                        "DefaultConnection")));
+        }
 
         services.AddScoped<IOrganizationRepository, OrganizationRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
@@ -34,6 +48,12 @@ public static class DependencyInjection
         services.AddScoped<IDevicePairingRepository, DevicePairingRepository>();
         services.AddScoped<IDeviceCredentialRepository, DeviceCredentialRepository>();
         services.AddScoped<IDeviceJwtService, DeviceJwtService>();
+        services.AddHostedService<DeviceStatusMonitor>();
+        services.AddScoped<IMediaRepository, MediaRepository>();
+        services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        services.AddScoped<IPlaylistRepository, PlaylistRepository>();
+        services.AddScoped<IPlaylistAssignmentRepository, PlaylistAssignmentRepository>();
+        services.AddScoped<IPlaylistScheduleRepository, PlaylistScheduleRepository>();
         return services;
     }
 }

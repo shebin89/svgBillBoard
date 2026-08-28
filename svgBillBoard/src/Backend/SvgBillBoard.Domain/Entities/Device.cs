@@ -49,4 +49,6 @@ public class Device
     public bool IsOnline { get; set; }
 
     public DateTime? LastOnlineAt { get; set; }
+
+    public int PlaybackVersion { get; set; } = 1;
 }

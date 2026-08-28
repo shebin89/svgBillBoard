@@ -10,29 +10,53 @@ namespace SvgBillBoard.Application.Services;
 public class DeviceService : IDeviceService
 {
     private readonly IDeviceRepository _deviceRepository;
-    private readonly IDevicePairingRepository _pairingRepository;
-    private readonly ILocationRepository _locationRepository;
-    private readonly IDeviceCredentialRepository _credentialRepository;
+
+    private readonly IDevicePairingRepository
+        _pairingRepository;
+
+    private readonly ILocationRepository
+        _locationRepository;
+
+    private readonly IDeviceCredentialRepository
+        _credentialRepository;
+
+    private readonly IDeviceJwtService
+        _deviceJwtService;
+
 
     public DeviceService(
         IDeviceRepository deviceRepository,
         IDevicePairingRepository pairingRepository,
         ILocationRepository locationRepository,
-        IDeviceCredentialRepository credentialRepository)
+        IDeviceCredentialRepository credentialRepository,
+        IDeviceJwtService deviceJwtService)
     {
-        _deviceRepository = deviceRepository;
-        _pairingRepository = pairingRepository;
-        _locationRepository = locationRepository;
-        _credentialRepository = credentialRepository;
+        _deviceRepository =
+            deviceRepository;
+
+        _pairingRepository =
+            pairingRepository;
+
+        _locationRepository =
+            locationRepository;
+
+        _credentialRepository =
+            credentialRepository;
+
+        _deviceJwtService =
+            deviceJwtService;
     }
 
-    public async Task<PairingResponse> GeneratePairingAsync(
-        Guid organizationId,
-        GeneratePairingRequest request)
+
+    public async Task<PairingResponse>
+        GeneratePairingAsync(
+            Guid organizationId,
+            GeneratePairingRequest request)
     {
         var location =
-            await _locationRepository.GetByIdAsync(
-                request.LocationId);
+            await _locationRepository
+                .GetByIdAsync(
+                    request.LocationId);
 
         if (location == null ||
             location.OrganizationId != organizationId)
@@ -41,44 +65,62 @@ public class DeviceService : IDeviceService
                 "Location was not found.");
         }
 
-        var pairingCode = GeneratePairingCode();
+        var pairingCode =
+            GeneratePairingCode();
 
-        var pairing = new DevicePairing
-        {
-            Id = Guid.NewGuid(),
+        var pairing =
+            new DevicePairing
+            {
+                Id =
+                    Guid.NewGuid(),
 
-            OrganizationId = organizationId,
+                OrganizationId =
+                    organizationId,
 
-            LocationId = request.LocationId,
+                LocationId =
+                    request.LocationId,
 
-            PairingCode = pairingCode,
+                PairingCode =
+                    pairingCode,
 
-            CreatedAt = DateTime.UtcNow,
+                CreatedAt =
+                    DateTime.UtcNow,
 
-            ExpiresAt =
-                DateTime.UtcNow.AddMinutes(10),
+                ExpiresAt =
+                    DateTime.UtcNow
+                        .AddMinutes(10),
 
-            Status = 1
-        };
+                Status = 1
+            };
 
-        await _pairingRepository.AddAsync(pairing);
+        await _pairingRepository
+            .AddAsync(pairing);
 
-        await _pairingRepository.SaveChangesAsync();
+        await _pairingRepository
+            .SaveChangesAsync();
 
         return new PairingResponse
         {
-            PairingCode = pairing.PairingCode,
+            PairingCode =
+                pairing.PairingCode,
 
-            LocationId = pairing.LocationId,
+            LocationId =
+                pairing.LocationId,
 
-            ExpiresAt = pairing.ExpiresAt
+            ExpiresAt =
+                pairing.ExpiresAt
         };
     }
+
 
     public async Task<DeviceAuthenticationResponse>
         PairDeviceAsync(
             PairDeviceRequest request)
     {
+        // ---------------------------------------------------------
+        // Validate request
+        // ---------------------------------------------------------
+
         if (string.IsNullOrWhiteSpace(
                 request.PairingCode))
         {
@@ -93,10 +135,20 @@ public class DeviceService : IDeviceService
                 "Device identifier is required.");
         }
 
+
+        // ---------------------------------------------------------
+        // Normalize pairing code
+        // ---------------------------------------------------------
+
         var code =
             request.PairingCode
                 .Trim()
                 .ToUpperInvariant();
+
+
+        // ---------------------------------------------------------
+        // Find pairing
+        // ---------------------------------------------------------
 
         var pairing =
             await _pairingRepository
@@ -108,17 +160,33 @@ public class DeviceService : IDeviceService
                 "Invalid pairing code.");
         }
 
+
+        // ---------------------------------------------------------
+        // Check pairing status
+        // ---------------------------------------------------------
+
         if (pairing.Status != 1)
         {
             throw new InvalidOperationException(
                 "Pairing code has already been used.");
         }
 
-        if (pairing.ExpiresAt < DateTime.UtcNow)
+
+        // ---------------------------------------------------------
+        // Check expiration
+        // ---------------------------------------------------------
+
+        if (pairing.ExpiresAt <
+            DateTime.UtcNow)
         {
             throw new InvalidOperationException(
                 "Pairing code has expired.");
         }
+
+
+        // ---------------------------------------------------------
+        // Check duplicate device
+        // ---------------------------------------------------------
 
         var existingDevice =
             await _deviceRepository
@@ -131,97 +199,142 @@ public class DeviceService : IDeviceService
                 "This device is already registered.");
         }
 
+
+        // ---------------------------------------------------------
+        // Generate unique device code
+        // ---------------------------------------------------------
+
         var deviceCode =
             await GenerateUniqueDeviceCodeAsync(
                 pairing.OrganizationId);
 
-        // Generate device token.
-        var deviceToken =
-            GenerateDeviceToken();
 
-        // Store only the hash in database.
+        // ---------------------------------------------------------
+        // Create device
+        // ---------------------------------------------------------
+
+        var device =
+            new Device
+            {
+                Id =
+                    Guid.NewGuid(),
+
+                OrganizationId =
+                    pairing.OrganizationId,
+
+                LocationId =
+                    pairing.LocationId,
+
+                Name =
+                    string.IsNullOrWhiteSpace(
+                        request.Name)
+                        ? $"Device {deviceCode}"
+                        : request.Name.Trim(),
+
+                DeviceIdentifier =
+                    request.DeviceIdentifier.Trim(),
+
+                DeviceCode =
+                    deviceCode,
+
+                DeviceType =
+                    request.DeviceType?.Trim(),
+
+                Platform =
+                    request.Platform?.Trim(),
+
+                AppVersion =
+                    request.AppVersion?.Trim(),
+
+                Model =
+                    request.Model?.Trim(),
+
+                Manufacturer =
+                    request.Manufacturer?.Trim(),
+
+                SerialNumber =
+                    request.SerialNumber?.Trim(),
+
+                MacAddress =
+                    request.MacAddress?.Trim(),
+
+                IpAddress =
+                    request.IpAddress?.Trim(),
+
+                Status = 1,
+
+                CreatedAt =
+                    DateTime.UtcNow,
+
+                UpdatedAt =
+                    DateTime.UtcNow
+            };
+
+
+        // ---------------------------------------------------------
+        // Generate JWT AFTER device exists
+        // ---------------------------------------------------------
+
+        var deviceToken =
+            _deviceJwtService
+                .GenerateToken(device);
+
+
+        // ---------------------------------------------------------
+        // Store only token hash
+        // ---------------------------------------------------------
+
         var tokenHash =
             HashToken(deviceToken);
 
-        var device = new Device
-        {
-            Id = Guid.NewGuid(),
 
-            OrganizationId =
-                pairing.OrganizationId,
+        // ---------------------------------------------------------
+        // Add device
+        // ---------------------------------------------------------
 
-            LocationId =
-                pairing.LocationId,
+        await _deviceRepository
+            .AddAsync(device);
 
-            Name =
-                string.IsNullOrWhiteSpace(request.Name)
-                    ? $"Device {deviceCode}"
-                    : request.Name.Trim(),
 
-            DeviceIdentifier =
-                request.DeviceIdentifier.Trim(),
+        // ---------------------------------------------------------
+        // Create device credential
+        // ---------------------------------------------------------
 
-            DeviceCode =
-                deviceCode,
+        var credential =
+            new DeviceCredential
+            {
+                Id =
+                    Guid.NewGuid(),
 
-            DeviceType =
-                request.DeviceType?.Trim(),
+                DeviceId =
+                    device.Id,
 
-            Platform =
-                request.Platform?.Trim(),
+                TokenHash =
+                    tokenHash,
 
-            AppVersion =
-                request.AppVersion?.Trim(),
+                CreatedAt =
+                    DateTime.UtcNow,
 
-            Model =
-                request.Model?.Trim(),
+                ExpiresAt =
+                    null,
 
-            Manufacturer =
-                request.Manufacturer?.Trim(),
+                LastUsedAt =
+                    null,
 
-            SerialNumber =
-                request.SerialNumber?.Trim(),
-
-            MacAddress =
-                request.MacAddress?.Trim(),
-
-            IpAddress =
-                request.IpAddress?.Trim(),
-
-            Status = 1,
-
-            CreatedAt =
-                DateTime.UtcNow,
-
-            UpdatedAt =
-                DateTime.UtcNow
-        };
-
-        await _deviceRepository.AddAsync(device);
-
-        // Create credential AFTER device exists.
-        var credential = new DeviceCredential
-        {
-            Id = Guid.NewGuid(),
-
-            DeviceId = device.Id,
-
-            TokenHash = tokenHash,
-
-            CreatedAt = DateTime.UtcNow,
-
-            ExpiresAt = null,
-
-            LastUsedAt = null,
-
-            RevokedAt = null
-        };
+                RevokedAt =
+                    null
+            };
 
         await _credentialRepository
             .AddAsync(credential);
 
-        // Consume pairing code.
-        pairing.DeviceId = device.Id;
+
+        // ---------------------------------------------------------
+        // Consume pairing code
+        // ---------------------------------------------------------
+
+        pairing.DeviceId =
+            device.Id;
 
         pairing.UsedAt =
             DateTime.UtcNow;
@@ -231,7 +344,11 @@ public class DeviceService : IDeviceService
         await _pairingRepository
             .UpdateAsync(pairing);
 
-        // Save all changes.
+
+        // ---------------------------------------------------------
+        // Save changes
+        // ---------------------------------------------------------
+
         await _deviceRepository
             .SaveChangesAsync();
 
@@ -241,18 +358,28 @@ public class DeviceService : IDeviceService
         await _pairingRepository
             .SaveChangesAsync();
 
+
+        // ---------------------------------------------------------
+        // Return device authentication response
+        // ---------------------------------------------------------
+
         return new DeviceAuthenticationResponse
         {
-            Device = Map(device),
+            Device =
+                Map(device),
 
-            DeviceToken = deviceToken,
+            DeviceToken =
+                deviceToken,
 
-            ExpiresAt = credential.ExpiresAt
+            ExpiresAt =
+                credential.ExpiresAt
         };
     }
 
-    public async Task<List<DeviceResponse>> GetAllAsync(
-        Guid organizationId)
+
+    public async Task<List<DeviceResponse>>
+        GetAllAsync(
+            Guid organizationId)
     {
         var devices =
             await _deviceRepository
@@ -264,22 +391,26 @@ public class DeviceService : IDeviceService
             .ToList();
     }
 
-    public async Task<DeviceResponse?> GetByIdAsync(
-        Guid organizationId,
-        Guid id)
+
+    public async Task<DeviceResponse?>
+        GetByIdAsync(
+            Guid organizationId,
+            Guid id)
     {
         var device =
             await _deviceRepository
                 .GetByIdAsync(id);
 
         if (device == null ||
-            device.OrganizationId != organizationId)
+            device.OrganizationId !=
+                organizationId)
         {
             return null;
         }
 
         return Map(device);
     }
+
 
     private async Task<string>
         GenerateUniqueDeviceCodeAsync(
@@ -290,11 +421,13 @@ public class DeviceService : IDeviceService
         do
         {
             var number =
-                RandomNumberGenerator.GetInt32(
-                    100000,
-                    999999);
+                RandomNumberGenerator
+                    .GetInt32(
+                        100000,
+                        999999);
 
-            code = $"TV-{number}";
+            code =
+                $"TV-{number}";
 
         } while (
             await _deviceRepository
@@ -305,7 +438,9 @@ public class DeviceService : IDeviceService
         return code;
     }
 
-    private static string GeneratePairingCode()
+
+    private static string
+        GeneratePairingCode()
     {
         const string characters =
             "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -313,9 +448,10 @@ public class DeviceService : IDeviceService
         Span<char> result =
             stackalloc char[6];
 
-        for (var i = 0;
-             i < result.Length;
-             i++)
+        for (
+            var i = 0;
+            i < result.Length;
+            i++)
         {
             result[i] =
                 characters[
@@ -327,30 +463,28 @@ public class DeviceService : IDeviceService
         return new string(result);
     }
 
-    private static string GenerateDeviceToken()
-    {
-        var bytes =
-            RandomNumberGenerator.GetBytes(32);
 
-        return Convert.ToBase64String(bytes);
-    }
-
-    private static string HashToken(
-        string token)
+    private static string
+        HashToken(
+            string token)
     {
         var bytes =
             SHA256.HashData(
-                Encoding.UTF8.GetBytes(token));
+                Encoding.UTF8.GetBytes(
+                    token));
 
         return Convert.ToHexString(bytes);
     }
 
-    private static DeviceResponse Map(
-        Device device)
+
+    private static DeviceResponse
+        Map(
+            Device device)
     {
         return new DeviceResponse
         {
-            Id = device.Id,
+            Id =
+                device.Id,
 
             OrganizationId =
                 device.OrganizationId,
