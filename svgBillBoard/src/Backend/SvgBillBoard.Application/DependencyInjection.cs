@@ -15,6 +15,12 @@ public static class DependencyInjection
         services.AddScoped<IDeviceService, DeviceService>();
         services.AddScoped<IDeviceAuthenticationService, DeviceAuthenticationService>();
         services.AddScoped<IDeviceHeartbeatService, DeviceHeartbeatService>();
+        services.AddScoped<IMediaService, MediaService>();
+        services.AddScoped<IPlaylistService, PlaylistService>();
+        services.AddScoped<IPlaylistAssignmentService, PlaylistAssignmentService>();
+        services.AddScoped<IDevicePlaybackService, DevicePlaybackService>();
+        services.AddScoped<IPlaylistScheduleService, PlaylistScheduleService>();
+        services.AddScoped<IPlaybackVersionService, PlaybackVersionService>();
         return services;
     }
 }

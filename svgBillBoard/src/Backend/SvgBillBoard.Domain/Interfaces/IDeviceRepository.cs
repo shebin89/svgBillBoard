@@ -22,5 +22,9 @@ public interface IDeviceRepository
 
     Task SaveChangesAsync();
 
-    Task<bool> UpdateHeartbeatAsync(Guid deviceId);
+    Task<Device?> UpdateHeartbeatAsync(Guid deviceId);
+
+    Task<List<Device>> GetOnlineDevicesAsync();
+
+    Task<List<Device>> GetByLocationIdAsync(Guid locationId);
 }

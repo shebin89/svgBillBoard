@@ -1,149 +1,149 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using SvgBillBoard.Application.Abstractions.Services;
-using SvgBillBoard.Application.DTOs.Devices;
-using SvgBillBoard.Domain.Interfaces;
+﻿    using System.Security.Cryptography;
+    using System.Text;
+    using SvgBillBoard.Application.Abstractions.Services;
+    using SvgBillBoard.Application.DTOs.Devices;
+    using SvgBillBoard.Domain.Interfaces;
 
-namespace SvgBillBoard.Application.Services;
+    namespace SvgBillBoard.Application.Services;
 
-public class DeviceAuthenticationService
-    : IDeviceAuthenticationService
-{
-    private readonly IDeviceCredentialRepository
-        _credentialRepository;
-
-    private readonly IDeviceJwtService
-        _deviceJwtService;
-
-    public DeviceAuthenticationService(
-        IDeviceCredentialRepository credentialRepository,
-        IDeviceJwtService deviceJwtService)
+    public class DeviceAuthenticationService
+        : IDeviceAuthenticationService
     {
-        _credentialRepository =
-            credentialRepository;
+        private readonly IDeviceCredentialRepository
+            _credentialRepository;
 
-        _deviceJwtService =
-            deviceJwtService;
-    }
+        private readonly IDeviceJwtService
+            _deviceJwtService;
 
-    public async Task<DeviceLoginResponse> LoginAsync(
-        DeviceLoginRequest request)
-    {
-        if (string.IsNullOrWhiteSpace(
-                request.DeviceToken))
+        public DeviceAuthenticationService(
+            IDeviceCredentialRepository credentialRepository,
+            IDeviceJwtService deviceJwtService)
         {
-            throw new UnauthorizedAccessException(
-                "Device token is required.");
+            _credentialRepository =
+                credentialRepository;
+
+            _deviceJwtService =
+                deviceJwtService;
         }
 
-        var tokenHash =
-            HashToken(request.DeviceToken);
-
-        var credential =
-            await _credentialRepository
-                .GetByTokenHashAsync(tokenHash);
-
-        if (credential == null)
+        public async Task<DeviceLoginResponse> LoginAsync(
+            DeviceLoginRequest request)
         {
-            throw new UnauthorizedAccessException(
-                "Invalid device token.");
-        }
-
-        if (credential.RevokedAt != null)
-        {
-            throw new UnauthorizedAccessException(
-                "Device credential has been revoked.");
-        }
-
-        if (credential.ExpiresAt != null &&
-            credential.ExpiresAt <= DateTime.UtcNow)
-        {
-            throw new UnauthorizedAccessException(
-                "Device credential has expired.");
-        }
-
-        if (credential.Device == null)
-        {
-            throw new UnauthorizedAccessException(
-                "Device was not found.");
-        }
-
-        var device = credential.Device;
-
-        if (device.Status != 1)
-        {
-            throw new UnauthorizedAccessException(
-                "Device is inactive.");
-        }
-
-        credential.LastUsedAt =
-            DateTime.UtcNow;
-
-        await _credentialRepository
-            .UpdateAsync(credential);
-
-        await _credentialRepository
-            .SaveChangesAsync();
-
-        var accessToken =
-            _deviceJwtService.GenerateToken(device);
-
-        var expiresAt =
-            DateTime.UtcNow.AddDays(30);
-
-        return new DeviceLoginResponse
-        {
-            AccessToken = accessToken,
-
-            ExpiresAt = expiresAt,
-
-            Device = new DeviceResponse
+            if (string.IsNullOrWhiteSpace(
+                    request.DeviceToken))
             {
-                Id = device.Id,
-                OrganizationId =
-                    device.OrganizationId,
-                LocationId =
-                    device.LocationId,
-                Name = device.Name,
-                DeviceIdentifier =
-                    device.DeviceIdentifier,
-                DeviceCode =
-                    device.DeviceCode,
-                DeviceType =
-                    device.DeviceType,
-                Platform =
-                    device.Platform,
-                AppVersion =
-                    device.AppVersion,
-                Model =
-                    device.Model,
-                Manufacturer =
-                    device.Manufacturer,
-                SerialNumber =
-                    device.SerialNumber,
-                MacAddress =
-                    device.MacAddress,
-                IpAddress =
-                    device.IpAddress,
-                LastSeenAt =
-                    device.LastSeenAt,
-                Status =
-                    device.Status,
-                CreatedAt =
-                    device.CreatedAt,
-                UpdatedAt =
-                    device.UpdatedAt
+                throw new UnauthorizedAccessException(
+                    "Device token is required.");
             }
-        };
-    }
 
-    private static string HashToken(
-        string token)
-    {
-        var bytes =
-            SHA256.HashData(
-                Encoding.UTF8.GetBytes(token));
+            var tokenHash =
+                HashToken(request.DeviceToken);
 
-        return Convert.ToHexString(bytes);
+            var credential =
+                await _credentialRepository
+                    .GetByTokenHashAsync(tokenHash);
+
+            if (credential == null)
+            {
+                throw new UnauthorizedAccessException(
+                    "Invalid device token.");
+            }
+
+            if (credential.RevokedAt != null)
+            {
+                throw new UnauthorizedAccessException(
+                    "Device credential has been revoked.");
+            }
+
+            if (credential.ExpiresAt != null &&
+                credential.ExpiresAt <= DateTime.UtcNow)
+            {
+                throw new UnauthorizedAccessException(
+                    "Device credential has expired.");
+            }
+
+            if (credential.Device == null)
+            {
+                throw new UnauthorizedAccessException(
+                    "Device was not found.");
+            }
+
+            var device = credential.Device;
+
+            if (device.Status != 1)
+            {
+                throw new UnauthorizedAccessException(
+                    "Device is inactive.");
+            }
+
+            credential.LastUsedAt =
+                DateTime.UtcNow;
+
+            await _credentialRepository
+                .UpdateAsync(credential);
+
+            await _credentialRepository
+                .SaveChangesAsync();
+
+            var accessToken =
+                _deviceJwtService.GenerateToken(device);
+
+            var expiresAt =
+                DateTime.UtcNow.AddDays(30);
+
+            return new DeviceLoginResponse
+            {
+                AccessToken = accessToken,
+
+                ExpiresAt = expiresAt,
+
+                Device = new DeviceResponse
+                {
+                    Id = device.Id,
+                    OrganizationId =
+                        device.OrganizationId,
+                    LocationId =
+                        device.LocationId,
+                    Name = device.Name,
+                    DeviceIdentifier =
+                        device.DeviceIdentifier,
+                    DeviceCode =
+                        device.DeviceCode,
+                    DeviceType =
+                        device.DeviceType,
+                    Platform =
+                        device.Platform,
+                    AppVersion =
+                        device.AppVersion,
+                    Model =
+                        device.Model,
+                    Manufacturer =
+                        device.Manufacturer,
+                    SerialNumber =
+                        device.SerialNumber,
+                    MacAddress =
+                        device.MacAddress,
+                    IpAddress =
+                        device.IpAddress,
+                    LastSeenAt =
+                        device.LastSeenAt,
+                    Status =
+                        device.Status,
+                    CreatedAt =
+                        device.CreatedAt,
+                    UpdatedAt =
+                        device.UpdatedAt
+                }
+            };
+        }
+
+        private static string HashToken(
+            string token)
+        {
+            var bytes =
+                SHA256.HashData(
+                    Encoding.UTF8.GetBytes(token));
+
+            return Convert.ToHexString(bytes);
+        }
     }
-}

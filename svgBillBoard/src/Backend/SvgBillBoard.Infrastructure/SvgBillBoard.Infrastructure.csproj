@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SvgBillBoard.Application\SvgBillBoard.Application.csproj" />
     <ProjectReference Include="..\SvgBillBoard.Domain\SvgBillBoard.Domain.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,7 +22,6 @@
     <Folder Include="Persistence\Seed\" />
     <Folder Include="Services\" />
     <Folder Include="SignalR\" />
-    <Folder Include="Storage\" />
   </ItemGroup>
 
   <ItemGroup>

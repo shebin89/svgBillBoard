@@ -4,33 +4,48 @@ using SvgBillBoard.Domain.Interfaces;
 
 namespace SvgBillBoard.Application.Services;
 
-public class DeviceHeartbeatService
-    : IDeviceHeartbeatService
+public class DeviceHeartbeatService : IDeviceHeartbeatService
 {
     private readonly IDeviceRepository _deviceRepository;
+    private readonly IDeviceStatusNotifier _statusNotifier;
 
     public DeviceHeartbeatService(
-        IDeviceRepository deviceRepository)
+        IDeviceRepository deviceRepository,
+        IDeviceStatusNotifier statusNotifier)
     {
         _deviceRepository = deviceRepository;
+        _statusNotifier = statusNotifier;
     }
 
     public async Task<DeviceHeartbeatResponse?> HeartbeatAsync(
         Guid deviceId)
     {
-        var updated =
+        var device =
             await _deviceRepository
                 .UpdateHeartbeatAsync(deviceId);
 
-        if (!updated)
+        if (device == null)
         {
             return null;
         }
 
+        var status = new DeviceStatusChangedResponse
+        {
+            DeviceId = device.Id,
+            OrganizationId = device.OrganizationId,
+            DeviceCode = device.DeviceCode,
+            DeviceName = device.Name,
+            IsOnline = device.IsOnline,
+            ChangedAt = DateTime.UtcNow
+        };
+
+        await _statusNotifier
+            .NotifyStatusChangedAsync(status);
+
         return new DeviceHeartbeatResponse
         {
-            DeviceId = deviceId,
-            IsOnline = true,
+            DeviceId = device.Id,
+            IsOnline = device.IsOnline,
             ServerTime = DateTime.UtcNow
         };
     }

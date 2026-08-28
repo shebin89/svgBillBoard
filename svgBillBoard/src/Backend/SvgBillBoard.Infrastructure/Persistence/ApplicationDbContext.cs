@@ -23,6 +23,11 @@ namespace SvgBillBoard.Infrastructure.Persistence
         public DbSet<Device> Devices => Set<Device>();
         public DbSet<DevicePairing> DevicePairings => Set<DevicePairing>();
         public DbSet<DeviceCredential> DeviceCredentials => Set<DeviceCredential>();
+        public DbSet<Media> Media => Set<Media>();
+        public DbSet<Playlist> Playlists => Set<Playlist>();
+        public DbSet<PlaylistItem> PlaylistItems => Set<PlaylistItem>();
+        public DbSet<PlaylistAssignment> PlaylistAssignments => Set<PlaylistAssignment>();
+        public DbSet<PlaylistSchedule> PlaylistSchedules => Set<PlaylistSchedule>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -300,6 +305,157 @@ namespace SvgBillBoard.Infrastructure.Persistence
                     .WithMany()
                     .HasForeignKey(x => x.DeviceId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Playlist>(entity =>
+            {
+                entity.ToTable("Playlists");
+
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Name)
+                    .HasMaxLength(150)
+                    .IsRequired();
+
+                entity.Property(x => x.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(x => x.Status)
+                    .IsRequired();
+
+                entity.Property(x => x.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(x => x.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasIndex(x => new
+                {
+                    x.OrganizationId,
+                    x.Name
+                })
+                .IsUnique();
+
+                entity.HasOne<Organization>()
+                    .WithMany()
+                    .HasForeignKey(x => x.OrganizationId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(x => x.Items)
+                    .WithOne(x => x.Playlist)
+                    .HasForeignKey(x => x.PlaylistId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<PlaylistItem>(entity =>
+            {
+                entity.ToTable("PlaylistItems");
+
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.DisplayOrder)
+                    .IsRequired();
+
+                entity.Property(x => x.DurationSeconds)
+                    .IsRequired();
+
+                entity.HasIndex(x => new
+                {
+                    x.PlaylistId,
+                    x.DisplayOrder
+                })
+                .IsUnique();
+
+                entity.HasOne(x => x.Playlist)
+                    .WithMany(x => x.Items)
+                    .HasForeignKey(x => x.PlaylistId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.Media)
+                    .WithMany()
+                    .HasForeignKey(x => x.MediaId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<PlaylistAssignment>(entity =>
+            {
+                entity.ToTable("PlaylistAssignments");
+
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Status)
+                    .IsRequired();
+
+                entity.Property(x => x.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(x => x.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasIndex(x => new
+                {
+                    x.OrganizationId,
+                    x.LocationId,
+                    x.PlaylistId
+                })
+                .IsUnique();
+
+                entity.HasOne(x => x.Playlist)
+                    .WithMany()
+                    .HasForeignKey(x => x.PlaylistId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.Location)
+                    .WithMany()
+                    .HasForeignKey(x => x.LocationId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne<Organization>()
+                    .WithMany()
+                    .HasForeignKey(x => x.OrganizationId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<PlaylistSchedule>(entity =>
+            {
+                entity.ToTable("PlaylistSchedules");
+
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.DaysOfWeek)
+                    .IsRequired();
+
+                entity.Property(x => x.Priority)
+                    .IsRequired();
+
+                entity.Property(x => x.Status)
+                    .IsRequired();
+
+                entity.Property(x => x.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(x => x.UpdatedAt)
+                    .IsRequired();
+
+                entity.HasIndex(x => new
+                {
+                    x.OrganizationId,
+                    x.LocationId,
+                    x.Priority
+                });
+
+                entity.HasOne(x => x.Playlist)
+                    .WithMany()
+                    .HasForeignKey(x => x.PlaylistId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.Location)
+                    .WithMany()
+                    .HasForeignKey(x => x.LocationId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne<Organization>()
+                    .WithMany()
+                    .HasForeignKey(x => x.OrganizationId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

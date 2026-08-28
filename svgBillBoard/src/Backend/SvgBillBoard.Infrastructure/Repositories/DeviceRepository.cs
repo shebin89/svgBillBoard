@@ -70,26 +70,43 @@ public class DeviceRepository : IDeviceRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<bool> UpdateHeartbeatAsync(Guid deviceId)
+    public async Task<Device?> UpdateHeartbeatAsync(Guid deviceId)
     {
         var device = await _context.Devices
-            .FirstOrDefaultAsync(x => x.Id == deviceId);
+            .FirstOrDefaultAsync(x =>
+                x.Id == deviceId &&
+                x.Status == 1);
 
         if (device == null)
         {
-            return false;
+            return null;
         }
 
         var now = DateTime.UtcNow;
 
         device.LastHeartbeatAt = now;
+        device.LastSeenAt = now;
         device.IsOnline = true;
         device.LastOnlineAt = now;
-        device.LastSeenAt = now;
         device.UpdatedAt = now;
 
         await _context.SaveChangesAsync();
 
-        return true;
+        return device;
+    }
+
+    public async Task<List<Device>>GetOnlineDevicesAsync()
+    {
+        return await _context.Devices
+            .Where(x => x.IsOnline)
+            .ToListAsync();
+    }
+
+    public async Task<List<Device>> GetByLocationIdAsync(
+    Guid locationId)
+    {
+        return await _context.Devices
+            .Where(x => x.LocationId == locationId)
+            .ToListAsync();
     }
 }
