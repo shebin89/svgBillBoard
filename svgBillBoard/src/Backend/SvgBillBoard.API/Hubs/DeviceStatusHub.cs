@@ -39,5 +39,6 @@ public class DeviceStatusHub : Hub
         }
 
         await base.OnDisconnectedAsync(exception);
+ 
     }
 }
